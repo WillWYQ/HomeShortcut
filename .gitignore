@@ -1,0 +1,19 @@
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Flask instance / local settings
+instance/
+.env
+.flaskenv
+
+# Generated status snapshots and private assets
+status.json
+
+
+# macOS cruft
+.DS_Store

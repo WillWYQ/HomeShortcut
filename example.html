@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Home Portal · Wabi-sabi Terminal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root {
+      --bg: #050608;
+      --bg-alt: #0b0d10;
+      --card-bg: #070a0f;
+      --fg: #e5e7eb;
+      --muted: #6b7280;
+      --accent: #9caf88;       /* 柔和草绿 */
+      --accent-soft: #c3d1b4;
+      --border: rgba(255, 255, 255, 0.06);
+      --border-soft: rgba(255, 255, 255, 0.03);
+      --error: #b85b56;
+      --error-soft: #f2c3bf;
+      --radius: 10px;
+      --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.75);
+      --shadow-hover: 0 22px 50px rgba(0, 0, 0, 0.85);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, #151820 0, #050608 48%, #020308 100%);
+      color: var(--fg);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                   "Liberation Mono", "Courier New", monospace;
+      line-height: 1.5;
+    }
+
+    /* 模拟老显示器的轻微扫描线 */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(
+        rgba(255, 255, 255, 0.02) 1px,
+        transparent 1px
+      );
+      background-size: 100% 3px;
+      mix-blend-mode: soft-light;
+      opacity: 0.4;
+      z-index: 0;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    /* 顶部 header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.6));
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .logo-main {
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      color: var(--accent-soft);
+    }
+
+    .logo-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: rgba(0, 0, 0, 0.5);
+      font-size: 0.75rem;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
+    }
+
+    .pill-online .pill-dot {
+      background-color: var(--accent);
+      box-shadow: 0 0 8px rgba(156, 175, 136, 0.9);
+    }
+
+    .pill-offline .pill-dot {
+      background-color: var(--error);
+      box-shadow: 0 0 8px rgba(184, 91, 86, 0.9);
+    }
+
+    /* 卡片网格 */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .section-title {
+      margin: 18px 2px 8px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+    }
+
+    /* card = 单个服务卡片 */
+    .card {
+      position: relative;
+      padding: 14px 14px 12px 18px;
+      border-radius: var(--radius);
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.04), rgba(5,6,8,0.98));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      transition:
+        transform 160ms ease-out,
+        box-shadow 160ms ease-out,
+        border-color 160ms ease-out,
+        background 160ms ease-out;
+    }
+
+    /* 左侧一条渐变细线，增加侘寂细节感 */
+    .card-accent {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      opacity: 0;
+      transition: opacity 160ms ease-out;
+      pointer-events: none;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.06), rgba(5,6,8,0.98));
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-soft);
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7);
+    }
+
+    .status-up {
+      background-color: var(--accent);
+      box-shadow:
+        0 0 6px rgba(156,175,136,0.95),
+        0 0 16px rgba(156,175,136,0.4);
+    }
+
+    .status-down {
+      background-color: var(--error);
+      box-shadow:
+        0 0 6px rgba(184,91,86,0.95),
+        0 0 16px rgba(184,91,86,0.4);
+    }
+
+    .card-body {
+      font-size: 0.78rem;
+      color: var(--fg);
+      margin-top: 4px;
+    }
+
+    .kv-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .kv-key {
+      color: var(--muted);
+      opacity: 0.9;
+    }
+
+    .kv-val-weak {
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: rgba(0, 0, 0, 0.4);
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .tag-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background-color: var(--muted);
+      opacity: 0.7;
+    }
+
+    .card-footer {
+      margin-top: 6px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .card-footer a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px dotted rgba(156,175,136,0.4);
+    }
+
+    .card-footer a:hover {
+      color: var(--accent-soft);
+      border-bottom-color: rgba(156,175,136,0.85);
+    }
+
+    @media (max-width: 640px) {
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-meta {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- 顶部 header：站点名 + 时间 + 网络状态 -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-main">home.portal</div>
+        <div class="logo-sub">侘寂 · terminal inspired · 局域网导航</div>
+      </div>
+      <div class="header-meta">
+        <span id="clock">--:--:--</span>
+        <!-- 后端可以根据实际网络状态切换 pill-online / pill-offline -->
+        <span class="pill pill-online">
+          <span class="pill-dot"></span>
+          <span>internet online</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- 常用服务 -->
+    <div class="section-title">Favorites</div>
+    <div class="grid">
+      <!-- NAS 示例 -->
+      <article class="card">
+        <div class="card-accent"></div>
+        <div class="card-header">
+          <div class="card-title">NAS · miao</div>
+          <div class="card-meta">
+            <span class="status-dot status-up"></span>
+            <span>3.2 ms</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="kv-line">
+            <span class="kv-key">proto</span>
+            <span>http</span>
+          </div>
+          <div class="kv-line">
+            <span class="kv-key">host</span>
+            <span>http://miao.myland:8080</span>
+          </div>
+          <div class="kv-line">
+            <span class="kv-key">role</span>
+            <span class="kv-val-weak">storage / download</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="tag">
+            <span class="tag-dot"></span>
+            storage
+          </span>
+          <a href="http://miao.myland:8080">open ↗</a>
+        </div>
+      </article>
+
+      <!-- Home Assistant 示例 -->
+      <article class="card">
+        <div class="card-accent"></div>
+        <div class="card-header">
+          <div class="card-title">home assistant</div>
+          <div class="card-meta">
+            <span class="status-dot status-up"></span>
+            <span>5.8 ms</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="kv-line">
+            <span class="kv-key">proto</span>
+            <span>https</span>
+          </div>
+          <div class="kv-line">
+            <span class="kv-key">host</span>
+            <span>https://homenotfound.myland</span>
+          </div>
+          <div class="kv-line">
+            <span class="kv-key">role</span>
+            <span class="kv-val-weak">smart home / scenes</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="tag">
+            <span class="tag-dot"></span>
+            smart home
+          </span>
+          <a href="https://homenotfound.myland">open ↗</a>
+        </div>
+      </article>
+
+      <!-- Internet 探测目标 示例 -->
+      <article class="card">
+        <div class="card-accent"></div>
+        <div class="card-header">
+          <div class="card-title">internet · 1.1.1.1</div>
+          <div class="card-meta">
+            <span class="status-dot status-up"></span>
+            <span>22.6 ms avg</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="kv-line">
+            <span class="kv-key">method</span>
+            <span>ping (2x, 1s timeout)</span>
+          </div>
+          <div class="kv-line">
+            <span class="kv-key">last check</span>
+            <span>just now</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="tag">
+            <span class="tag-dot"></span>
+            connectivity
+          </span>
+          <span class="kv-val-weak">only show here when degraded</span>
+        </div>
+      </article>
+    </div>
+
+    <!-- 你以后可以在这里加「异常服务」或者「全部服务状态表」 -->
+
+  </div>
+
+  <script>
+    // 简单的本地时钟，展示在 header 右侧
+    function updateClock() {
+      const el = document.getElementById("clock");
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      const ss = String(now.getSeconds()).padStart(2, "0");
+      el.textContent = `${hh}:${mm}:${ss}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>

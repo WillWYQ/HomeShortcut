@@ -3,6 +3,8 @@
 > **Home Shortcut (宅LAN站)** is a LAN-only home portal and status dashboard for self-hosted services.  
 > 宅LAN站是一个完全本地、断网也能用的家庭内网导航与状态面板。
 
+📘 [English README](README.en.md) · 📙 [中文 README](README.zh.md)
+
 ---
 
 ## Name / 名字由来
@@ -48,8 +50,8 @@
 
 ### 🧭 LAN Portal / 内网导航
 
-- 网格卡片展示常用服务：NAS、下载器、软路由、Home Assistant、MIAO、TrendRadar……
-- 一键跳转 Web UI，无需再手敲 `http://192.168.68.x:port`.
+- 网格卡片展示常用服务：NAS、下载器、软路由、Home Assistant，etc
+- 一键跳转 Web UI，无需再手敲 `http://192.168.1.x:port`.
 
 ### 🧯 Only Noisy When Things Break / 出事才嚷嚷
 
@@ -246,6 +248,33 @@ python app.py
   然后直接访问：`http://home.myland`
 
 ---
+
+## One-Line Launch & Auto-Start / 一行启动 + 自启
+
+1. **配置好 config**  
+   - 推荐把真实配置放进 `private/config.yaml`（gitignore，可保护隐私）。
+
+2. **一行启动 / One-liner run**
+   ```bash
+   ./portalctl.sh run
+   ```
+   脚本会自动创建 `.venv`、安装依赖，并执行 `flask run --host 0.0.0.0 --port 8000`。
+
+3. **开机自启**
+   ```bash
+   ./portalctl.sh install
+   ```
+   - **macOS**：写入 `~/Library/LaunchAgents/com.home.portal.plist` 并通过 `launchctl load -w` 注册。
+   - **Linux（Debian/Ubuntu 等）**：写入 `~/.config/systemd/user/home-portal.service` 并执行 `systemctl --user enable --now ...`。（如需无登陆运行，可执行 `loginctl enable-linger $USER`）
+   - 日志输出到 `logs/flask.out.log` & `logs/flask.err.log`
+
+4. **移除自启**
+   ```bash
+   ./portalctl.sh uninstall
+   ```
+   - macOS 卸载 LaunchAgent；Linux 卸载 systemd user service。
+
+> On non-macOS hosts feel free to adapt `portalctl.sh` for systemd or other init systems; the `run` subcommand仍可本地开发使用。
 
 ## Roadmap / 路线图（草案）
 
