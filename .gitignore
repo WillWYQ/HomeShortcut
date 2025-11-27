@@ -18,3 +18,5 @@ status.json
 
 # macOS cruft
 .DS_Store
+secrets.env
+config/private.yaml
