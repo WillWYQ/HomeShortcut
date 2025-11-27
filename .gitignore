@@ -13,6 +13,7 @@ instance/
 
 # Generated status snapshots and private assets
 status.json
+/private
 
 
 # macOS cruft
