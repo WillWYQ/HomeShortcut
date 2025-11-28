@@ -103,7 +103,7 @@ cmd_install() {
     install_launchagent
   else
     install_systemd
-  }
+  fi
 }
 
 uninstall_launchagent() {
@@ -132,7 +132,7 @@ cmd_uninstall() {
     uninstall_launchagent
   else
     uninstall_systemd
-  }
+  fi
 }
 
 case "${1:-}" in
