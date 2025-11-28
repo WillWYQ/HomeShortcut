@@ -6,7 +6,7 @@ const WEATHER_INTERVAL = 180000;
 
 const TRANSLATIONS = {
   zh: {
-    tagline: '侘寂 · terminal 风 · 局域网入口',
+    tagline: '局域网入口',
     section_signal: '信号监控',
     section_lan: 'LAN 导航 / Favorites',
     section_alerts: '异常服务 / Alerts',
@@ -79,7 +79,7 @@ const TRANSLATIONS = {
     time_on: '于 %s'
   },
   en: {
-    tagline: 'Wabi-sabi · terminal inspired · LAN entry',
+    tagline: 'LAN entry',
     section_signal: 'Signal Monitor',
     section_lan: 'LAN Deck / Favorites',
     section_alerts: 'Alerts',

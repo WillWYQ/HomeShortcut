@@ -1,0 +1,71 @@
+# Template config for Home Shortcut / 宅LAN站
+# Copy this file to `private/config.yaml` and customize values for your LAN.
+
+site:
+  title: "Home Shortcut"
+  timezone: "America/Indiana/Indianapolis"  # IANA timezone for timestamps
+
+services:
+  # Each entry represents one LAN service card + status check.
+  - name: "Family NAS"
+    type: "http"        # http | ping | tcp
+    url: "http://192.168.68.20:5000"
+    category: "Storage"  # Display grouping (Storage / Smart Home / Network / Misc ...)
+    important: true        # true surfaces failures in alert panel first
+    icon: "nas"           # Optional short label used for styling
+
+  - name: "Home Assistant"
+    type: "http"
+    url: "http://192.168.68.10:8123"
+    category: "Smart Home"
+    important: true
+    icon: "ha"
+
+  - name: "Soft Router"
+    type: "ping"
+    host: "192.168.68.1" # required for ping/tcp
+    category: "Network"
+    important: true
+    icon: "router"
+
+  - name: "SSH Bastion"
+    type: "tcp"
+    host: "192.168.68.5"
+    port: 22
+    category: "Network"
+    important: false
+    icon: "terminal"
+
+  - name: "TrendRadar"
+    type: "http"
+    url: "http://192.168.68.50:9000"
+    category: "Misc"
+    important: false
+    icon: "trend"
+
+internet_targets:
+  # Targets used for latency + online/offline indicator (ping).
+  - "1.1.1.1"
+  - "8.8.8.8"
+  - "9.9.9.9"
+
+internet_services:
+  # Optional HTTP probes for SaaS endpoints.
+  - name: "Cloudflare"
+    url: "https://www.cloudflare.com"
+  - name: "Google"
+    url: "https://www.google.com"
+  - name: "AWS Console"
+    url: "https://console.aws.amazon.com"
+
+weather:
+  enabled: true
+  lat: 39.7684
+  lon: -86.1581
+  timezone: "America/Indiana/Indianapolis"
+  aurora_check: true          # Try Open-Meteo aurora API (non-US fallback)
+
+trentradar:
+  enabled: false               # For future integration: link | iframe | api
+  mode: "link"
+  url: "http://192.168.68.50:9000"

@@ -21,3 +21,7 @@ Self-hosted landing page for家庭局域网 services. Fully local assets; depend
 - Everything is self-contained; no CDN, fonts, or icon downloads needed
 - Weather gracefully degrades when offline, site keeps working
 - Modify `config.yaml` (or copy into `private/`) to adapt to your LAN
+
+## Config Template
+- A fully-commented starter lives at `config.yaml` in the repo root.
+- For real deployments, copy it to `private/config.yaml`, adjust values, and keep secrets out of git.
