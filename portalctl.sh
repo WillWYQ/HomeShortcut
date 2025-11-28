@@ -4,10 +4,25 @@ set -euo pipefail
 APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PATH="${APP_ROOT}/.venv"
 PYTHON_BIN="${PYTHON_BINARY:-python3}"
-FLASK_BIN="${VENV_PATH}/bin/flask"
+GUNICORN_BIN="${VENV_PATH}/bin/gunicorn"
 PLIST_PATH="${HOME}/Library/LaunchAgents/com.home.portal.plist"
 SYSTEMD_UNIT_DIR="${HOME}/.config/systemd/user"
 SYSTEMD_UNIT="${SYSTEMD_UNIT_DIR}/home-portal.service"
+PORTAL_HOST="${PORTAL_HOST:-0.0.0.0}"
+TLS_CERT="${PORTAL_TLS_CERT:-}"
+TLS_KEY="${PORTAL_TLS_KEY:-}"
+TLS_CA="${PORTAL_TLS_CA:-}"
+DEFAULT_PORT="8000"
+if [[ -n "${TLS_CERT}" || -n "${TLS_KEY}" ]]; then
+  DEFAULT_PORT="443"
+fi
+PORTAL_PORT="${PORTAL_PORT:-${DEFAULT_PORT}}"
+BIND_ADDRESS="${PORTAL_HOST}:${PORTAL_PORT}"
+WORKERS="${PORTAL_WORKERS:-2}"
+GUNICORN_TIMEOUT="${PORTAL_TIMEOUT:-30}"
+APP_MODULE="${PORTAL_APP_MODULE:-app:app}"
+LOG_DIR="${APP_ROOT}/logs"
+EXTRA_ARGS_STR="${PORTAL_EXTRA_GUNICORN_ARGS:-}"
 
 ensure_venv() {
   if [[ ! -d "${VENV_PATH}" ]]; then
@@ -20,6 +35,34 @@ ensure_venv() {
   pip install -r "${APP_ROOT}/requirements.txt"
 }
 
+build_gunicorn_cmd() {
+  GUNICORN_CMD=(
+    "${GUNICORN_BIN}"
+    "--bind" "${BIND_ADDRESS}"
+    "--workers" "${WORKERS}"
+    "--timeout" "${GUNICORN_TIMEOUT}"
+    "--chdir" "${APP_ROOT}"
+    "${APP_MODULE}"
+  )
+
+  if [[ -n "${TLS_CERT}" || -n "${TLS_KEY}" ]]; then
+    if [[ -z "${TLS_CERT}" || -z "${TLS_KEY}" ]]; then
+      echo "[portalctl] ERROR: both PORTAL_TLS_CERT and PORTAL_TLS_KEY must be set to enable TLS" >&2
+      exit 1
+    fi
+    GUNICORN_CMD+=("--certfile" "${TLS_CERT}" "--keyfile" "${TLS_KEY}")
+    if [[ -n "${TLS_CA}" ]]; then
+      GUNICORN_CMD+=("--ca-certs" "${TLS_CA}")
+    fi
+  fi
+
+  if [[ -n "${EXTRA_ARGS_STR}" ]]; then
+    # shellcheck disable=SC2206
+    local -a extra_args=(${EXTRA_ARGS_STR})
+    GUNICORN_CMD+=("${extra_args[@]}")
+  fi
+}
+
 cmd_setup() {
   ensure_venv
   echo "[portalctl] Environment ready."
@@ -27,12 +70,14 @@ cmd_setup() {
 
 cmd_run() {
   ensure_venv
-  export FLASK_APP="${APP_ROOT}/app.py"
-  exec "${FLASK_BIN}" run --host 0.0.0.0 --port 8000
+  mkdir -p "${LOG_DIR}"
+  build_gunicorn_cmd
+  exec "${GUNICORN_CMD[@]}"
 }
 
 install_launchagent() {
-  mkdir -p "${APP_ROOT}/logs" "$(dirname "${PLIST_PATH}")"
+  mkdir -p "${LOG_DIR}" "$(dirname "${PLIST_PATH}")"
+  build_gunicorn_cmd
   cat > "${PLIST_PATH}" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -42,18 +87,12 @@ install_launchagent() {
     <string>com.home.portal</string>
     <key>ProgramArguments</key>
     <array>
-      <string>${VENV_PATH}/bin/flask</string>
-      <string>run</string>
-      <string>--host</string>
-      <string>0.0.0.0</string>
-      <string>--port</string>
-      <string>8000</string>
+EOF
+  for arg in "${GUNICORN_CMD[@]}"; do
+    printf '      <string>%s</string>\n' "$arg"
+  done >> "${PLIST_PATH}"
+  cat >> "${PLIST_PATH}" <<EOF
     </array>
-    <key>EnvironmentVariables</key>
-    <dict>
-      <key>FLASK_APP</key>
-      <string>${APP_ROOT}/app.py</string>
-    </dict>
     <key>WorkingDirectory</key>
     <string>${APP_ROOT}</string>
     <key>RunAtLoad</key>
@@ -61,9 +100,9 @@ install_launchagent() {
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>${APP_ROOT}/logs/flask.out.log</string>
+    <string>${LOG_DIR}/gunicorn.out.log</string>
     <key>StandardErrorPath</key>
-    <string>${APP_ROOT}/logs/flask.err.log</string>
+    <string>${LOG_DIR}/gunicorn.err.log</string>
   </dict>
 </plist>
 EOF
@@ -73,7 +112,11 @@ EOF
 }
 
 install_systemd() {
-  mkdir -p "${APP_ROOT}/logs" "${SYSTEMD_UNIT_DIR}"
+  mkdir -p "${LOG_DIR}" "${SYSTEMD_UNIT_DIR}"
+  build_gunicorn_cmd
+  local exec_cmd=""
+  printf -v exec_cmd '%q ' "${GUNICORN_CMD[@]}"
+  exec_cmd="${exec_cmd% }"
   cat > "${SYSTEMD_UNIT}" <<EOF
 [Unit]
 Description=Home Portal
@@ -82,11 +125,10 @@ Wants=network-online.target
 
 [Service]
 WorkingDirectory=${APP_ROOT}
-ExecStart=${VENV_PATH}/bin/flask run --host 0.0.0.0 --port 8000
-Environment=FLASK_APP=${APP_ROOT}/app.py
+ExecStart=${exec_cmd}
 Restart=always
-StandardOutput=append:${APP_ROOT}/logs/flask.out.log
-StandardError=append:${APP_ROOT}/logs/flask.err.log
+StandardOutput=append:${LOG_DIR}/gunicorn.out.log
+StandardError=append:${LOG_DIR}/gunicorn.err.log
 
 [Install]
 WantedBy=default.target
